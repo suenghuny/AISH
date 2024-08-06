@@ -203,6 +203,8 @@ class Missile:
 
         self.last_v_x = 0
         self.last_v_y = 0
+        self.v_x = 0
+        self.v_y = 0
         self.a_x = 0
         self.a_y = 0
 
@@ -1409,7 +1411,7 @@ class Ship:
             target_position_x = target.position_x+ np.random.normal(0, norm)
             target_position_y = target.position_y + np.random.normal(0, norm)
         else:
-            distance = ((target.position_y-self.position_y)**2+(target.position_x-self.position_x)**2)/4000
+            distance = ((target.position_y-self.position_y)**2+(target.position_x-self.position_x)**2)/50000
             target_position_y = target.position_y+np.random.normal(0, distance)
             target_position_x = target.position_x+np.random.normal(0, distance)
 ###
@@ -1422,6 +1424,8 @@ class Ship:
         c = rel_pos_x ** 2 + rel_pos_y ** 2
         discriminant = b ** 2 - 4 * a * c
         t = (-b - math.sqrt(discriminant)) / (2 * a)        # 명중점 계산
+        # if (self.side == 'blue') and (self.cla != 'SSM'):
+        #     print(t)
         estimated_x = target_position_x + target.v_x * t
         estimated_y = target_position_y + target.v_y * t
         return estimated_x, estimated_y

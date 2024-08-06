@@ -1,6 +1,6 @@
 type					    1	2	3	4
-speed					    2.5	2.5	2.5	2.5
-attack_range				50	50	15	15
+speed					    5.5	5.5	5.5	5.5
+attack_range				60	60	30	30
 beam_width				    30	30	30	30
 angular_velocity			7	7	7	7
 rotation_range			    30	30	30	30
