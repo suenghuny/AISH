@@ -38,7 +38,6 @@ def preprocessing(scenarios):
 
 
 
-
 def train(agent, env, t):
     temp = random.uniform(fix_l, fix_u)
     agent_yellow = Policy(env, rule='rule2', temperatures=[temp, temp])
