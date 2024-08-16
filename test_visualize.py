@@ -77,6 +77,7 @@ def evaluation(agent, env):
                         ship_feature[0][7+cfg.discr_n+1:7+cfg.discr_n+4],
                         ship_feature[0][7+cfg.discr_n+4:7+cfg.discr_n+6],
                         ship_feature[0][7+cfg.discr_n+6:7+cfg.discr_n+8],
+                        ship_feature[0][7+cfg.discr_n+8:-1],
                         td_target])
 
                 action_blue, prob, mask, a_index, graph_embedding, graph_feature, output = agent.sample_action_visualize(ship_feature, missile_node_feature,heterogeneous_edges, avail_action_blue[i],action_feature, random = False)
@@ -203,7 +204,7 @@ if __name__ == "__main__":
         random.seed(seed)
         torch.manual_seed(seed)
 
-        for e in range(500):
+        for e in range(100):
             env = modeler(data,
                           visualize=visualize,
                           size=size,
@@ -224,8 +225,8 @@ if __name__ == "__main__":
 
             print(e, win_tag, np.mean(non_lose_records))
 
-        # with open("state feature0.json", "w", encoding='utf-8') as json_file:
-        #     json.dump(data_memory, json_file, ensure_ascii=False)
+        with open("state feature2.json", "w", encoding='utf-8') as json_file:
+            json.dump(data_memory, json_file, ensure_ascii=False)
         # import matplotlib.pyplot as plt
         # from sklearn.manifold import TSNE
         #
