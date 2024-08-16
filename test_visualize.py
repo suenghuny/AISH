@@ -1,7 +1,8 @@
-from Components.Modeler_Component_visualize import *
+from Components.Modeler_Component_test import *
 from Components.Adapter_Component import *
 from Components.Policy import *
 from collections import deque
+import torch
 from cfg import get_cfg
 from GPO import Agent
 import numpy as np
@@ -65,11 +66,18 @@ def evaluation(agent, env):
                 agent.eval_check(eval=True)
                 if k >=2.0:
                     td_target = agent.get_td_target(ship_feature, missile_node_feature, heterogeneous_edges, avail_action_blue[i], action_feature, reward = reward, done = done)
-                    # print(graph_embedding)
-                    # print(graph_feature)
-
-                    #if (a_index != 0) or (a_index != 1) or (a_index != 2) or (a_index != 3):
-                    data_memory.append([graph_embedding,graph_feature,output, td_target])
+                    #print(ship_feature)
+                    # 7+cfg.discr_n+1:7+cfg.discr_n+4
+                    # 7+cfg.discr_n+4:7+cfg.discr_n+6
+                    # 7+cfg.discr_n+6:7+cfg.discr_n+8
+                    #print(ship_feature[0][0:7])
+                    data_memory.append([
+                        ship_feature[0][0:7],
+                        ship_feature[0][7: 7+cfg.discr_n+1],
+                        ship_feature[0][7+cfg.discr_n+1:7+cfg.discr_n+4],
+                        ship_feature[0][7+cfg.discr_n+4:7+cfg.discr_n+6],
+                        ship_feature[0][7+cfg.discr_n+6:7+cfg.discr_n+8],
+                        td_target])
 
                 action_blue, prob, mask, a_index, graph_embedding, graph_feature, output = agent.sample_action_visualize(ship_feature, missile_node_feature,heterogeneous_edges, avail_action_blue[i],action_feature, random = False)
                 actions_blue.append(action_blue)
@@ -122,7 +130,7 @@ if __name__ == "__main__":
     환경 시스템 관련 변수들
 
     """
-    visualize = True  # 가시화 기능 사용 여부 / True : 가시화 적용, False : 가시화 미적용
+    visualize =False  # 가시화 기능 사용 여부 / True : 가시화 적용, False : 가시화 미적용
     size = [600, 600]  # 화면 size / 600, 600 pixel
     tick = 500  # 가시화 기능 사용 시 빠르기
     n_step = cfg.n_step
@@ -148,14 +156,54 @@ if __name__ == "__main__":
     datasets = [i for i in range(1, 10)]
     non_lose_ratio_list = []
     raw_data = list()
-    for inception_angle in [90]:
-        print(inception_angle)
-        for dataset in datasets:
+    for dataset in datasets:
 
-            print("====dataset{}_{}====".format(dataset, inception_angle))
-            fitness_history = []
-            data = preprocessing(dataset)
-            t = 0
+        print("====dataset{}=====".format(dataset))
+        fitness_history = []
+        data = preprocessing(dataset)
+        t = 0
+        env = modeler(data,
+                      visualize=visualize,
+                      size=size,
+                      detection_by_height=detection_by_height,
+                      tick=tick,
+                      simtime_per_framerate=simtime_per_frame,
+                      ciws_threshold=ciws_threshold,
+                      action_history_step=cfg.action_history_step)
+
+        agent = Agent(action_size=env.get_env_info()["n_actions"],
+                      feature_size_ship=env.get_env_info()["ship_feature_shape"],
+                      feature_size_missile=env.get_env_info()["missile_feature_shape"],
+                      n_node_feature_missile=env.friendlies_fixed_list[0].air_tracking_limit +
+                                             env.friendlies_fixed_list[0].air_engagement_limit +
+                                             env.friendlies_fixed_list[0].num_m_sam +
+                                             1,
+                     node_embedding_layers_ship=list(eval(cfg.ship_layers)),
+                     node_embedding_layers_missile=list(eval(cfg.missile_layers)),
+                     n_representation_ship = cfg.n_representation_ship,
+                     n_representation_missile = cfg.n_representation_missile,
+                     n_representation_action = cfg.n_representation_action,
+
+                     learning_rate=cfg.lr,
+                     learning_rate_critic=cfg.lr_critic,
+                     gamma=cfg.gamma,
+                     lmbda=cfg.lmbda,
+                     eps_clip = cfg.eps_clip,
+                     K_epoch = cfg.K_epoch,
+                     layers=list(eval(cfg.ppo_layers))
+                     )
+        load_file = "episode33100"
+        agent.load_network(load_file+'.pt') # 2900, 1600
+        reward_list = list()
+
+        non_lose_ratio = 0
+        non_lose_records = []
+        seed = cfg.seed
+        np.random.seed(seed)
+        random.seed(seed)
+        torch.manual_seed(seed)
+
+        for e in range(500):
             env = modeler(data,
                           visualize=visualize,
                           size=size,
@@ -163,94 +211,38 @@ if __name__ == "__main__":
                           tick=tick,
                           simtime_per_framerate=simtime_per_frame,
                           ciws_threshold=ciws_threshold,
-                          action_history_step=cfg.action_history_step,
-                          inception_angle = inception_angle)
+                          action_history_step=cfg.action_history_step)
+            episode_reward, win_tag = evaluation(agent, env)
 
-            agent = Agent(action_size=env.get_env_info()["n_actions"],
-                          feature_size_ship=env.get_env_info()["ship_feature_shape"],
-                          feature_size_missile=env.get_env_info()["missile_feature_shape"],
-                          n_node_feature_missile=env.friendlies_fixed_list[0].air_tracking_limit +
-                                                 env.friendlies_fixed_list[0].air_engagement_limit +
-                                                 env.friendlies_fixed_list[0].num_m_sam +
-                                                 1,
-                         node_embedding_layers_ship=list(eval(cfg.ship_layers)),
-                         node_embedding_layers_missile=list(eval(cfg.missile_layers)),
-                         n_representation_ship = cfg.n_representation_ship,
-                         n_representation_missile = cfg.n_representation_missile,
-                         n_representation_action = cfg.n_representation_action,
+            if win_tag != 'lose':
+                non_lose_ratio += 1 / cfg.n_test
+                non_lose_records.append(1)
+                raw_data.append([str(env.random_recording), 1])
+            else:
+                non_lose_records.append(0)
+                raw_data.append([str(env.random_recording), 0])
 
-                         learning_rate=cfg.lr,
-                         learning_rate_critic=cfg.lr_critic,
-                         gamma=cfg.gamma,
-                         lmbda=cfg.lmbda,
-                         eps_clip = cfg.eps_clip,
-                         K_epoch = cfg.K_epoch,
-                         layers=list(eval(cfg.ppo_layers))
-                         )
-            load_file = "episode10200"
-            agent.load_network(load_file+'.pt') # 2900, 1600
-            reward_list = list()
+            print(e, win_tag, np.mean(non_lose_records))
 
-            non_lose_ratio = 0
-            non_lose_records = []
-            seed = cfg.seed
-            np.random.seed(seed)
-            random.seed(seed)
-            torch.manual_seed(seed)
-
-            for e in range(20):
-                env = modeler(data,
-                              visualize=visualize,
-                              size=size,
-                              detection_by_height=detection_by_height,
-                              tick=tick,
-                              simtime_per_framerate=simtime_per_frame,
-                              ciws_threshold=ciws_threshold,
-                              action_history_step=cfg.action_history_step,
-                              inception_angle = inception_angle)
-                episode_reward, win_tag = evaluation(agent, env)
-
-                # with open("data.json", "w") as json_file:
-                #     json.dump(data_memory, json_file)
-
-                with open("GNN_datassss.json", "w", encoding='utf-8') as json_file:
-                    json.dump(data_memory, json_file, ensure_ascii=False)
-                # import matplotlib.pyplot as plt
-                # from sklearn.manifold import TSNE
-                # X = [item[0] for item in data_memory]
-                # X2 = [item[0] for item in data_memory]
-                # y = [item[1] for item in data_memory]
-                #
-                # # t-SNE를 사용하여 데이터를 2D로 변환
-                # tsne = TSNE(n_components=2, random_state=0)
-                # tsne2 = TSNE(n_components=2, random_state=0)
-                # X_2d = tsne.fit_transform(X)
-                # X_3d = tsne2.fit_transform(X2)
-                #
-                # # 시각화
-                # plt.figure(figsize=(8, 6))
-                # scatter = plt.scatter(X_2d[:, 0], X_2d[:, 1], c=y, cmap='viridis')
-                #
-                #
-                # # 컬러바 추가
-                # cbar = plt.colorbar(scatter)
-                #
-                # plt.xlabel('hi1')
-                # plt.ylabel('hi2')
-                # plt.title('t-SNE visualization')
-                # plt.show()
-                # #
-
-                if win_tag != 'lose':
-                    non_lose_ratio += 1/cfg.n_test
-                    non_lose_records.append(1)
-                    raw_data.append([str(env.random_recording), 1])
-                else:
-                    non_lose_records.append(0)
-                    raw_data.append([str(env.random_recording), 0])
-
-
-                print(e, win_tag, np.mean(non_lose_records))
-
+        # with open("state feature0.json", "w", encoding='utf-8') as json_file:
+        #     json.dump(data_memory, json_file, ensure_ascii=False)
+        # import matplotlib.pyplot as plt
+        # from sklearn.manifold import TSNE
+        #
+        # X = np.array([item[0] for item in data_memory])
+        # y = [item[1] for item in data_memory]
+        # tsne = TSNE(n_components=1, random_state=0)
+        # X_2d = tsne.fit_transform(X)
+        #
+        # # 시각화
+        # plt.figure(figsize=(8, 6))
+        # scatter = plt.scatter(X_2d[:, 0], y)
+        # plt.xlabel('x')
+        # plt.ylabel('y')
+        # plt.title('t-SNE visualization')
+        # plt.show()
+        #
+        #
+        #
 
 

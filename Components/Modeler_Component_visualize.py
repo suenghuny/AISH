@@ -600,11 +600,15 @@ class Environment:
         empty0 = [f1,f2,f3,f4,f5,f6,f7]
         n = cfg.discr_n
         empty1 = [0] * n
+        #7: 7+cfg.discr_n
         for enemy_ssm in ship.ssm_detections:
             for k in range(n):
                 if (k) / n * ship.detection_range < cal_distance(ship, enemy_ssm) <= (k+1)/n * ship.detection_range:
                     empty1[k] += 1/ship.air_tracking_limit
 
+        # 7+cfg.discr_n+1:7+cfg.discr_n+4
+        # 7+cfg.discr_n+4:7+cfg.discr_n+6
+        # 7+cfg.discr_n+6:7+cfg.discr_n+8
         empty2 = [len(ship.surface_prelaunching_managing_list)/ship.surface_engagement_limit,
                   len(ship.m_sam_launcher) / ship.num_m_sam,
                   len(ship.l_sam_launcher) / ship.num_l_sam,

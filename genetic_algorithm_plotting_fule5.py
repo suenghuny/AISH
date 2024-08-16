@@ -184,7 +184,7 @@ if __name__ == "__main__":
     polar_chart = [polar_chart_scenario1]
     df_dict = {}
     episode_polar_chart = polar_chart[0]
-    datasets = [i for i in range(1, 2)]
+    datasets = [i for i in range(1, 9)]
     start = time.time()
 
     non_lose_ratio_list = []
@@ -208,37 +208,38 @@ if __name__ == "__main__":
         records = list()
 
         solution_space = [[i/10 for i in range(-200, 200)], [i/10  for i in range(0, 500)],
-                          [i/10  for i in range(-200, 200)], [i/10  for i in range(0, 500)], [i/10 for i in range(0,2000)],
-                          [i/10 for i in range(0,3000)]
+                          [i/10  for i in range(-200, 200)], [i/10  for i in range(0, 500)], [i/10 for i in range(0,1000)],
+                          [i/10 for i in range(0,2000)]
                           ]
         num_genes = len(solution_space)
 
         initial_population = []
-        sol_per_pop =20
+        sol_per_pop =100
         np.random.seed(cfg.seed)
         for _ in range(sol_per_pop):
             new_solution = [np.random.choice(space) for space in solution_space]
             initial_population.append(new_solution)
 
-        num_generations = 10 # 세대 수
-        num_parents_mating = 6  # 각 세대에서 선택할 부모 수
+        num_generations = 50 # 세대 수
+        num_parents_mating = int(sol_per_pop * 0.25)  # 각 세대에서 선택할 부모 수
         init_range_low = 0
         init_range_high = 20
-        parent_selection_type = "sss"
+        parent_selection_type = "tournament"
         keep_parents = 2
-        crossover_type = "single_point"
+        crossover_type = "two_points"
         mutation_type = "random"
-        mutation_percent_genes = 30
+        mutation_percent_genes = 5
 
 
         import pygad
-        ga_instance = pygad.GA(num_generations=num_generations,
-                               num_parents_mating=num_parents_mating,
-                               fitness_func=fitness_func,
-                               sol_per_pop=sol_per_pop,
-                               num_genes=num_genes,
-                                parent_selection_type = parent_selection_type,
-                                keep_parents = keep_parents,
+        ga_instance = pygad.GA(
+                               num_generations   = num_generations,
+                               num_parents_mating= num_parents_mating,
+                               fitness_func      = fitness_func,
+                               sol_per_pop       = sol_per_pop,
+                               num_genes         = num_genes,
+                               parent_selection_type = parent_selection_type,
+                               keep_parents = keep_parents,
                                initial_population=initial_population,
                                gene_space = solution_space,
                                crossover_type = crossover_type,
@@ -252,8 +253,9 @@ if __name__ == "__main__":
                                on_generation=on_generation,
                                on_stop=on_stop,
                                random_seed=cfg.seed
-
                                )
+
+
 
         # 최적화 실행
         ga_instance.run()

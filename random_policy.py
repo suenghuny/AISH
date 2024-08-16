@@ -57,10 +57,13 @@ def simulation():
                       )
         epi_reward, eval, win_tag= evaluation(env, temperature1=1,temperature2 =1, warning_distance = 1)
         if win_tag != 'lose':
-            score += 1 / n
-
+            non_lose_ratio += 1 / cfg.n_test
+            non_lose_records.append(1)
+            raw_data.append([str(env.random_recording), 1])
         else:
-            score += 0
+            non_lose_records.append(0)
+            raw_data.append([str(env.random_recording), 0])
+        print(e, win_tag, np.mean(non_lose_records))
 
     return score
 
@@ -165,13 +168,13 @@ if __name__ == "__main__":
     polar_chart = [polar_chart_scenario1]
     df_dict = {}
     episode_polar_chart = polar_chart[0]
-    datasets = [i for i in range(1,31)]
+    datasets = [i for i in range(1, 9)]
     non_lose_ratio_list = []
     raw_data = list()
     for dataset in datasets:
         fitness_history = []
         data = preprocessing(dataset)
-        visualize = False  # 가시화 기능 사용 여부 / True : 가시화 적용, False : 가시화 미적용
+        visualize = True  # 가시화 기능 사용 여부 / True : 가시화 적용, False : 가시화 미적용
         size = [600, 600]  # 화면 size / 600, 600 pixel
         tick = 500  # 가시화 기능 사용 시 빠르기
         simtime_per_frame = cfg.simtime_per_frame

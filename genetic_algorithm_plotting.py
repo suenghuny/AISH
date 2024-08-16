@@ -185,7 +185,7 @@ if __name__ == "__main__":
     polar_chart = [polar_chart_scenario1]
     df_dict = {}
     episode_polar_chart = polar_chart[0]
-    datasets = [i for i in range(1, 31)]
+    datasets = [i for i in range(1, 9)]
     non_lose_ratio_list = []
     raw_data = list()
     for dataset in datasets:
@@ -212,21 +212,21 @@ if __name__ == "__main__":
         num_genes = len(solution_space)
 
         initial_population = []
-        sol_per_pop =8
+        sol_per_pop =100
         np.random.seed(cfg.seed)
         for _ in range(sol_per_pop):
             new_solution = [np.random.choice(space) for space in solution_space]
             initial_population.append(new_solution)
 
-        num_generations = 12 # 세대 수
-        num_parents_mating = 6  # 각 세대에서 선택할 부모 수
+        num_generations = 50 # 세대 수
+        num_parents_mating = int(sol_per_pop * 0.25)  # 각 세대에서 선택할 부모 수
         init_range_low = 0
         init_range_high = 20
-        parent_selection_type = "sss"
+        parent_selection_type = "tournament"
         keep_parents = 2
-        crossover_type = "single_point"
+        crossover_type = "two_points"
         mutation_type = "random"
-        mutation_percent_genes = 30
+        mutation_percent_genes = 5
         import pygad
         ga_instance = pygad.GA(num_generations=num_generations,
                                num_parents_mating=num_parents_mating,
