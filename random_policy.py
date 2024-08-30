@@ -8,31 +8,6 @@ import numpy as np
 fix_l = 0
 fix_u = 17
 fit_records = []
-best_solutions = dict()
-def on_start(ga_instance):
-    print("on_start()")
-
-def on_fitness(ga_instance, population_fitness):
-    print("on_fitness()")
-
-def on_parents(ga_instance, selected_parents):
-    print("on_parents()")
-
-def on_crossover(ga_instance, offspring_crossover):
-    print("on_crossover()")
-
-def on_mutation(ga_instance, offspring_mutation):
-    print("on_mutation()")
-
-def on_generation(ga_instance):
-
-    print("Generation = {generation}".format(generation=ga_instance.generations_completed))
-    print("Fitness    = {fitness}".format(fitness=ga_instance.best_solution()[1]))
-    fit_records.append(ga_instance.best_solution()[1])
-
-def on_stop(ga_instance, last_population_fitness):
-    print("on_stop()")
-
 
 def simulation():
     score = 0
@@ -51,19 +26,14 @@ def simulation():
                       tick=tick,
                       simtime_per_framerate=simtime_per_frame,
                       ciws_threshold=ciws_threshold,
-                      action_history_step=cfg.action_history_step,
-                      air_alert_distance_blue=  1,
-                      interval_constant_blue = [1, 1]
-                      )
-        epi_reward, eval, win_tag= evaluation(env, temperature1=1,temperature2 =1, warning_distance = 1)
+                      action_history_step=cfg.action_history_step)
+        epi_reward, eval, win_tag= evaluation(env, temperature1=1,temperature2 =1, warning_distance = 500000000)
+        print(win_tag)
         if win_tag != 'lose':
-            non_lose_ratio += 1 / cfg.n_test
-            non_lose_records.append(1)
-            raw_data.append([str(env.random_recording), 1])
+            score += 1 / n
+
         else:
-            non_lose_records.append(0)
-            raw_data.append([str(env.random_recording), 0])
-        print(e, win_tag, np.mean(non_lose_records))
+            score += 0
 
     return score
 
@@ -96,7 +66,7 @@ def evaluation(env,
                warning_distance
                ):
     temp = random.uniform(fix_l, fix_u)
-    agent_blue = Policy(env, rule='rule0', temperatures=[temperature1, temperature2])
+    agent_blue = Policy(env, rule='rule0_prime', temperatures=[temperature1, temperature2])
     agent_yellow = Policy(env, rule='rule2', temperatures=[temp, temp])
     done = False
     episode_reward = 0
@@ -109,9 +79,10 @@ def evaluation(env,
 
     while not done:
         if env.now % (decision_timestep) <= 0.00001:
-            avail_action_blue, target_distance_blue, air_alert_blue = env.get_avail_actions_temp(side='blue', speed_normalizing_blue=False)
+            avail_action_blue, target_distance_blue, air_alert_blue = env.get_avail_actions_temp(side='blue')
             avail_action_yellow, target_distance_yellow, air_alert_yellow = env.get_avail_actions_temp(side='yellow')
-
+            if True in avail_action_blue[0][1:]:
+                avail_action_blue[0][0] = True
             action_blue = agent_blue.get_action(avail_action_blue, target_distance_blue, air_alert_blue, open_fire_distance = warning_distance)
             action_yellow = agent_yellow.get_action(avail_action_yellow, target_distance_yellow, air_alert_yellow)
             reward, win_tag, done, leaker = env.step(action_blue, action_yellow, rl = False)
@@ -168,13 +139,13 @@ if __name__ == "__main__":
     polar_chart = [polar_chart_scenario1]
     df_dict = {}
     episode_polar_chart = polar_chart[0]
-    datasets = [i for i in range(1, 9)]
+    datasets = [i for i in range(1, 2)]
     non_lose_ratio_list = []
     raw_data = list()
     for dataset in datasets:
         fitness_history = []
         data = preprocessing(dataset)
-        visualize = True  # 가시화 기능 사용 여부 / True : 가시화 적용, False : 가시화 미적용
+        visualize = False  # 가시화 기능 사용 여부 / True : 가시화 적용, False : 가시화 미적용
         size = [600, 600]  # 화면 size / 600, 600 pixel
         tick = 500  # 가시화 기능 사용 시 빠르기
         simtime_per_frame = cfg.simtime_per_frame
@@ -183,7 +154,7 @@ if __name__ == "__main__":
         num_iteration = cfg.num_episode  # 시뮬레이션 반복횟수
         rule = 'rule2'          # rule1 : 랜덤 정책 / rule2 : 거리를 기반 합리성에 기반한 정책(softmax policy)
         temperature = [10, 20]  # rule = 'rule2'인 경우만 적용 / 의사결정의 flexibility / 첫번째 index : 공중 위험이 낮은 상태, 두번째 index : 공중 위험이 높은 상태
-        ciws_threshold = 0.5
+        ciws_threshold = 1
         lose_ratio = list()
         remains_ratio = list()
         df_dict = {}
@@ -193,11 +164,7 @@ if __name__ == "__main__":
         score = simulation()
         non_lose_ratio_list.append(score)
         df_result = pd.DataFrame(non_lose_ratio_list)
-        if vessl_on == True:
-            df_result.to_csv(output_dir + "GA_result_rule2_param2_angle_{}2.csv".format(cfg.inception_angle))
-            vessl.log(step=dataset, payload={'non_lose_ratio': score})
-        else:
-            df_result.to_csv("random_result_rule2_param2_angle_{}2.csv".format(cfg.inception_angle))
+        df_result.to_csv("greedy_result_rule2_param2_angle_{}.csv".format(cfg.inception_angle))
 
 
 

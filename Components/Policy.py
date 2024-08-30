@@ -116,7 +116,15 @@ class Policy:
                 avail_action = np.array(avail_action_list[idx])
                 avail_actions_index = np.array(np.where(avail_action == True)).reshape(-1)
                 actions.append(np.random.choice(avail_actions_index))
-
+        if self.rule == 'rule0_prime':
+            actions = list()
+            for idx in range(len(avail_action_list)):
+                avail_action = np.array(avail_action_list[idx])
+                if True in avail_action[1:]:
+                    avail_action[0] = False
+                avail_actions_index = np.array(np.where(avail_action == True)).reshape(-1)
+                #print(avail_actions_index)
+                actions.append(np.random.choice(avail_actions_index))
         if self.rule == 'rule1':
             actions = list()
             for idx in range(len(avail_action_list)):
@@ -128,10 +136,6 @@ class Policy:
             actions = list()
             # print(target_distance_list)
             if air_alert == True:
-
-                # print(self.temperature1, target_distance_list[0], softmax(target_distance_list[0], temperature = self.temperature1))
-                # print(self.temperature2, target_distance_list[0], softmax(target_distance_list[0], temperature = self.temperature2))
-
                 for idx in range(len(avail_action_list)):
                     avail_action = np.array(avail_action_list[idx])
                     avail_actions_index = np.array(np.where(avail_action == True)).reshape(-1)

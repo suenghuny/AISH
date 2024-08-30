@@ -217,6 +217,8 @@ class Agent:
     def batch_reset(self):
         self.batch_store = []
 
+
+
     @torch.no_grad()
     def get_td_target(self, ship_features, node_features_missile, heterogenous_edges, possible_actions, action_feature, reward, done):
         obs_next, act_graph = self.get_node_representation(ship_features,node_features_missile, heterogenous_edges,mini_batch=False)
@@ -240,9 +242,11 @@ class Agent:
             logit = torch.cat([logit, remain_action], dim=1)
             mask = torch.tensor(possible_actions, device=device).bool()
             logit = logit.masked_fill(mask == 0, -1e8)
+
             prob = torch.softmax(logit, dim=-1)
             m = Categorical(prob)
             a = m.sample().item()
+
             a_index = a
             prob_a = prob.squeeze(0)[a]
             action_blue = action_feature[a]
@@ -264,15 +268,14 @@ class Agent:
             logit = logit.masked_fill(mask == 0, -1e8)
             logit = logit.masked_fill(mask == 1, 1)
             prob = torch.softmax(logit, dim=-1)
+            #print(prob)
             m = Categorical(prob)
             a = m.sample().item()
             a_index = a
             prob_a = prob.squeeze(0)[a]
             action_blue = action_feature[a]
-            #print(act_graph[a_index].tolist())
         graph_embedding = act_graph[a_index].tolist()
         node_feature = node_features_missile[a_index]
-
         output = outputs[a_index].tolist()[0]
         return action_blue, prob_a, mask, a_index, graph_embedding, node_feature, output
 
