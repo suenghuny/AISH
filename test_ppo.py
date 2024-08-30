@@ -211,7 +211,7 @@ if __name__ == "__main__":
 
         non_lose_ratio_list.append(non_lose_ratio)
         df = pd.DataFrame(non_lose_ratio_list)
-        df.to_csv("rev_ppo_result_{}_angle_{}.csv".format(load_file, cfg.inception_angle))
+        df.to_csv(output_dir+"rev_ppo_result_{}_angle_{}.csv".format(load_file, cfg.inception_angle))
         df_raw = pd.DataFrame(raw_data)
-        df_raw.to_csv("rev_raw_data_ppo_angle_{}.csv".format(cfg.inception_angle))
+        df_raw.to_csv(output_dir+"rev_raw_data_ppo_angle_{}.csv".format(cfg.inception_angle))
 

@@ -115,6 +115,9 @@ class CIWS:
                         (bullet.position_y - target_position_y) ** 2 +
                         (bullet.position_z - target_position_z) ** 2) ** 0.5 <= self.threshold:
                         target.status = 'destroyed'
+
+
+
                         if target in flying_ssms_enemy:
                             # 이미 기만 process에서 이미 target 개체가 remove 될 수 있기 때문에 조건문(조건문 아니면 Value error 발생)
                             flying_ssms_enemy.remove(target)
@@ -533,6 +536,11 @@ class Missile:
                         # LSAM인 경우 지령 유도 리스트에서 공격 관리(내가 어떤 표적을 공격중이다)를 종료한다.
                     else:
                         pass
+        # if (self.launcher.side == 'blue')and (self.target.cla == 'SSM') and (self.target.status == 'destroyed'):
+        #     self.destroying_record_by_distance = ((self.launcher.position_x - self.target.position_x)**2+(self.launcher.position_y - self.target.position_y)**2)**0.5
+        #
+        # else:pass
+            #print(((self.launcher.position_x - self.target.position_x)**2+(self.launcher.position_y - self.target.position_y)**2)**0.5)
 
     def cal_distance_estimated_hitting_point(self):
         return ((self.position_x - self.estimated_hitting_point_x) ** 2 + (
@@ -1012,7 +1020,6 @@ class Ship:
                  msam_launching_duration_max,
                  interpolating_rcs
                  ):
-
         self.cla = 'ship'
         self.id = id
         self.env = env
@@ -1446,7 +1453,6 @@ class Ship:
             target_id = 0
         else:  #
             for tar in self.env.enemies_fixed_list:
-
                 if action_feature == tar.last_action_feature[self.id-1]:
                     target_id = self.env.enemies_fixed_list.index(tar) + 1
                     #print(action_feature)
