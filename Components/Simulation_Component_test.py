@@ -5,9 +5,7 @@ from math import pi
 import math
 import pygame
 from collections import deque
-
 import sys
-
 sys.path.append("..")  # 상위 폴더를 import할 수 있도록 경로 추가
 from cfg import get_cfg
 
@@ -92,7 +90,6 @@ class CIWS:
         self.max_num_per_min = ciws_max_num_per_min
         self.bullet_capacity = ciws_bullet_capacity
         self.std_accuracy = std_accuracy
-
         self.threshold = self.env.ciws_threshold
         self.target = None
         self.original_target = None
@@ -118,6 +115,9 @@ class CIWS:
                         (bullet.position_y - target_position_y) ** 2 +
                         (bullet.position_z - target_position_z) ** 2) ** 0.5 <= self.threshold:
                         target.status = 'destroyed'
+
+
+
                         if target in flying_ssms_enemy:
                             # 이미 기만 process에서 이미 target 개체가 remove 될 수 있기 때문에 조건문(조건문 아니면 Value error 발생)
                             flying_ssms_enemy.remove(target)
@@ -203,6 +203,9 @@ class Missile:
 
         self.last_v_x = 0
         self.last_v_y = 0
+        self.v_x = 0
+        self.v_y = 0
+
         self.a_x = 0
         self.a_y = 0
 
@@ -533,6 +536,11 @@ class Missile:
                         # LSAM인 경우 지령 유도 리스트에서 공격 관리(내가 어떤 표적을 공격중이다)를 종료한다.
                     else:
                         pass
+        # if (self.launcher.side == 'blue')and (self.target.cla == 'SSM') and (self.target.status == 'destroyed'):
+        #     self.destroying_record_by_distance = ((self.launcher.position_x - self.target.position_x)**2+(self.launcher.position_y - self.target.position_y)**2)**0.5
+        #
+        # else:pass
+            #print(((self.launcher.position_x - self.target.position_x)**2+(self.launcher.position_y - self.target.position_y)**2)**0.5)
 
     def cal_distance_estimated_hitting_point(self):
         return ((self.position_x - self.estimated_hitting_point_x) ** 2 + (
@@ -1012,7 +1020,6 @@ class Ship:
                  msam_launching_duration_max,
                  interpolating_rcs
                  ):
-
         self.cla = 'ship'
         self.id = id
         self.env = env
@@ -1413,17 +1420,26 @@ class Ship:
     def get_estimated_hitting_point(self, missile, target):
         if missile.cla == 'SSM':
             norm = 500 * 1 / self.env.now
-            noise_y = target.position_y + np.random.normal(0, norm)
-            noise_x = target.position_x + np.random.normal(0, norm)
+            target_position_x = target.position_x + np.random.normal(0, norm)
+            target_position_y = target.position_y + np.random.normal(0, norm)
         else:
-            distance = ((target.position_y - self.position_y) ** 2 + (target.position_x - self.position_x) ** 2) / 4000
-            noise_y = target.position_y + np.random.normal(0, distance)
-            noise_x = target.position_x + np.random.normal(0, distance)
+            distance = ((target.position_y - self.position_y) ** 2 + (target.position_x - self.position_x) ** 2) / 50000
+            target_position_y = target.position_y + np.random.normal(0, distance)
+            target_position_x = target.position_x + np.random.normal(0, distance)
+        ###
+        rel_pos_x = target_position_x - self.position_x
+        rel_pos_y = target_position_y - self.position_y
 
-        theta = math.atan2(noise_y - self.position_y, noise_x - self.position_x)
-        time_to_intersection = (noise_x - self.position_x) / (missile.speed * math.cos(theta))
-        estimated_x = noise_x + target.v_x * time_to_intersection  ##self.position_x + 300*math.cos(theta)#((-target.position_y+self.position_y)-(target.position_x*(-target.v_x/target.v_y)-self.position_x*math.tan(-theta)))/(math.tan(-theta)-(-target.v_x/target.v_y))
-        estimated_y = noise_y + target.v_y * time_to_intersection  # self.position_y + 300*math.sin(theta)#((target.position_x-self.position_y)-(target.position_y*(-target.v_y/target.v_x)-self.position_y*1/math.tan(-theta)))/(1/math.tan(-theta)-(-target.v_y/target.v_x))
+        # 2차 방정식의 계수 계산
+        a = (target.v_x ** 2 + target.v_y ** 2 - missile.speed ** 2)
+        b = 2 * (rel_pos_x * target.v_x + rel_pos_y * target.v_y)
+        c = rel_pos_x ** 2 + rel_pos_y ** 2
+        discriminant = b ** 2 - 4 * a * c
+        t = (-b - math.sqrt(discriminant)) / (2 * a)  # 명중점 계산
+        # if (self.side == 'blue') and (self.cla != 'SSM'):
+        #     print(t)
+        estimated_x = target_position_x + target.v_x * t
+        estimated_y = target_position_y + target.v_y * t
         return estimated_x, estimated_y
 
     def target_allot_by_action_feature(self, action_feature):
@@ -1437,7 +1453,6 @@ class Ship:
             target_id = 0
         else:  #
             for tar in self.env.enemies_fixed_list:
-
                 if action_feature == tar.last_action_feature[self.id-1]:
                     target_id = self.env.enemies_fixed_list.index(tar) + 1
                     #print(action_feature)

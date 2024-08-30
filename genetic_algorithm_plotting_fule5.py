@@ -184,7 +184,7 @@ if __name__ == "__main__":
     polar_chart = [polar_chart_scenario1]
     df_dict = {}
     episode_polar_chart = polar_chart[0]
-    datasets = [i for i in range(1, 2)]
+    datasets = [i for i in range(1, 9)]
     start = time.time()
 
     non_lose_ratio_list = []
@@ -201,44 +201,45 @@ if __name__ == "__main__":
         num_iteration = cfg.num_episode  # 시뮬레이션 반복횟수
         rule = 'rule2'          # rule1 : 랜덤 정책 / rule2 : 거리를 기반 합리성에 기반한 정책(softmax policy)
         temperature = [10, 20]  # rule = 'rule2'인 경우만 적용 / 의사결정의 flexibility / 첫번째 index : 공중 위험이 낮은 상태, 두번째 index : 공중 위험이 높은 상태
-        ciws_threshold = 0.5
+        ciws_threshold = 1
         lose_ratio = list()
         remains_ratio = list()
         df_dict = {}
         records = list()
 
-        solution_space = [[i/10 for i in range(-200, 200)], [i/10  for i in range(0, 500)],
-                          [i/10  for i in range(-200, 200)], [i/10  for i in range(0, 500)], [i/10 for i in range(0,2000)],
-                          [i/10 for i in range(0,3000)]
+        solution_space = [[i/10 for i in range(-1000, 1000)], [i/10  for i in range(0, 1000)],
+                          [i/10  for i in range(-1000, 1000)], [i/10  for i in range(0, 1000)], [i/10 for i in range(0,2000)],
+                          [i/10 for i in range(0,4000)]
                           ]
         num_genes = len(solution_space)
 
         initial_population = []
-        sol_per_pop =20
+        sol_per_pop = 40
         np.random.seed(cfg.seed)
         for _ in range(sol_per_pop):
             new_solution = [np.random.choice(space) for space in solution_space]
             initial_population.append(new_solution)
 
-        num_generations = 10 # 세대 수
-        num_parents_mating = 6  # 각 세대에서 선택할 부모 수
-        init_range_low = 0
-        init_range_high = 20
-        parent_selection_type = "sss"
-        keep_parents = 2
-        crossover_type = "single_point"
-        mutation_type = "random"
-        mutation_percent_genes = 30
+        num_generations = 20 # 세대 수
+        num_parents_mating = 8  # 부모 수 약간 증가
+        init_range_low = -50  # 초기화 범위 확장
+        init_range_high = 50
+        parent_selection_type = "tournament"  # 토너먼트 선택으로 변경
+        keep_parents = -1  # 모든 부모를 새로운 자식으로 대체
+        crossover_type = "uniform"  # 균일 교차로 변경
+        mutation_type = "swap"  # 적응형 돌연변이로 변경
+        mutation_percent_genes = 10  # 돌연변이 비율 감소
 
 
         import pygad
-        ga_instance = pygad.GA(num_generations=num_generations,
-                               num_parents_mating=num_parents_mating,
-                               fitness_func=fitness_func,
-                               sol_per_pop=sol_per_pop,
-                               num_genes=num_genes,
-                                parent_selection_type = parent_selection_type,
-                                keep_parents = keep_parents,
+        ga_instance = pygad.GA(
+                               num_generations   = num_generations,
+                               num_parents_mating= num_parents_mating,
+                               fitness_func      = fitness_func,
+                               sol_per_pop       = sol_per_pop,
+                               num_genes         = num_genes,
+                               parent_selection_type = parent_selection_type,
+                               keep_parents = keep_parents,
                                initial_population=initial_population,
                                gene_space = solution_space,
                                crossover_type = crossover_type,
@@ -252,8 +253,9 @@ if __name__ == "__main__":
                                on_generation=on_generation,
                                on_stop=on_stop,
                                random_seed=cfg.seed
-
                                )
+
+
 
         # 최적화 실행
         ga_instance.run()

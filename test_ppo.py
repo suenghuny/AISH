@@ -4,6 +4,7 @@ from Components.Policy import *
 from collections import deque
 from cfg import get_cfg
 from GPO import Agent
+import torch
 import numpy as np
 
 from scipy.stats import randint
@@ -117,7 +118,7 @@ if __name__ == "__main__":
     환경 시스템 관련 변수들
 
     """
-    visualize = True  # 가시화 기능 사용 여부 / True : 가시화 적용, False : 가시화 미적용
+    visualize  = False  # 가시화 기능 사용 여부 / True : 가시화 적용, False : 가시화 미적용
     size = [600, 600]  # 화면 size / 600, 600 pixel
     tick = 500  # 가시화 기능 사용 시 빠르기
     n_step = cfg.n_step
@@ -139,7 +140,7 @@ if __name__ == "__main__":
     # scenario = np.random.choice(scenarios)
     episode_polar_chart = polar_chart[0]
     records = list()
-    datasets = [i for i in range(1, 31)]
+    datasets = [i for i in range(1, 8)]
     non_lose_ratio_list = []
     raw_data = list()
     for dataset in datasets:
@@ -177,10 +178,9 @@ if __name__ == "__main__":
                      K_epoch = cfg.K_epoch,
                      layers=list(eval(cfg.ppo_layers))
                      )
-        load_file = "actor_critic"
+        load_file = "episode33100"
         agent.load_network(load_file+'.pt') # 2900, 1600
         reward_list = list()
-
         non_lose_ratio = 0
         non_lose_records = []
         seed = cfg.seed
@@ -211,7 +211,7 @@ if __name__ == "__main__":
 
         non_lose_ratio_list.append(non_lose_ratio)
         df = pd.DataFrame(non_lose_ratio_list)
-        df.to_csv("rev_ppo_result_{}_angle_{}.csv".format(load_file, cfg.inception_angle))
+        df.to_csv(output_dir+"rev_ppo_result_{}_angle_{}.csv".format(load_file, cfg.inception_angle))
         df_raw = pd.DataFrame(raw_data)
-        df_raw.to_csv("rev_raw_data_ppo_angle_{}.csv".format(cfg.inception_angle))
+        df_raw.to_csv(output_dir+"rev_raw_data_ppo_angle_{}.csv".format(cfg.inception_angle))
 

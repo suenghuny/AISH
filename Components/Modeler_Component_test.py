@@ -117,32 +117,26 @@ class Environment:
         inception_data = self.data.inception_data
         noise = random.uniform(-10, 10)
         self.missile_speed_list = list()
-        if cfg.angle_random == True:
-            inception_range = random.uniform(0, 360)
-        else:
-            inception_range = cfg.inception_angle
         self.random_recording = list()
         for key, value in data.ship_data.items():
+            inception_range = 90 + random.uniform(-25, 25)
             if value['side']=='blue':
-                speed = 25
-                course = 90
-                initial_position_x = 50+random.uniform(-15, 15)
-                initial_position_y = 50+random.uniform(-15, 15)
-
-
+                speed = 0
+                course = 0
+                initial_position_x = 200
+                initial_position_y = 200
             else:
                 if mode == True:
-                    speed = 25
-                    course = 90
-                    initial_position_x = 50 + 10*inception_data['inception_distance'] * np.cos(inception_range * np.pi / 180) + 10*random.normalvariate(inception_data['enemy_spacing_mean'], inception_data['enemy_spacing_std'])
-                    initial_position_y = 50 + 10*inception_data['inception_distance'] * np.sin(inception_range * np.pi / 180) + 10*random.normalvariate(inception_data['enemy_spacing_mean'], inception_data['enemy_spacing_std'])
-
+                    speed = 0
+                    course = 0
+                    initial_position_x = 200 + 10*inception_data['inception_distance'] * np.cos(inception_range * np.pi / 180) + 10*random.normalvariate(inception_data['enemy_spacing_mean'], inception_data['enemy_spacing_std'])
+                    initial_position_y = 200 + 10*inception_data['inception_distance'] * np.sin(inception_range * np.pi / 180) + 10*random.normalvariate(inception_data['enemy_spacing_mean'], inception_data['enemy_spacing_std'])
                 else:
-                    speed = 25
-                    course = 90
-                    initial_position_x = 50 + 10 * inception_data['inception_distance'] * np.cos(
+                    speed = 0
+                    course = 0
+                    initial_position_x = 200 + 10 * inception_data['inception_distance'] * np.cos(
                         inception_range * np.pi / 180)+ 10* random.normalvariate(inception_data['enemy_spacing_mean'], inception_data['enemy_spacing_std'])
-                    initial_position_y = 50 + 10 * inception_data['inception_distance'] * np.sin(
+                    initial_position_y = 200 + 10 * inception_data['inception_distance'] * np.sin(
                         inception_range* np.pi / 180) + 10* random.normalvariate(inception_data['enemy_spacing_mean'], inception_data['enemy_spacing_std'])
             #print(initial_position_x, initial_position_y)
             self.random_recording.append((initial_position_x, initial_position_y))
@@ -730,12 +724,18 @@ class Environment:
 
 
     def get_feature(self, ship, target, action_feature = False):
+
+        if target.speed+ship.speed ==  0:
+            normalizer = 1
+        else:
+            normalizer = target.speed+ship.speed
+
         if action_feature == False:
-            r = ((target.position_x - ship.position_x) ** 2 + (target.position_y - ship.position_y) ** 2) ** 0.5 / ((target.speed+ship.speed)*2000)
-            v = ((target.v_x - ship.v_x) ** 2 + (target.v_y - ship.v_y) ** 2) ** 0.5 / (target.speed+ship.speed)
+            r = ((target.position_x - ship.position_x) ** 2 + (target.position_y - ship.position_y) ** 2) ** 0.5 / (normalizer*2000)
+            v = ((target.v_x - ship.v_x) ** 2 + (target.v_y - ship.v_y) ** 2) ** 0.5 / normalizer
             theta_r = math.atan2(target.position_y - ship.position_y, target.position_x - ship.position_x)
             theta_v = math.atan2(ship.v_y - target.v_y, ship.v_x - target.v_x)
-            a = ((target.a_x - ship.a_x) ** 2 + (target.a_y - ship.a_y) ** 2) ** 0.5 / (target.speed+ship.speed)
+            a = ((target.a_x - ship.a_x) ** 2 + (target.a_y - ship.a_y) ** 2) ** 0.5 / normalizer
             #print(a)
             theta_a = math.atan2(ship.a_y - target.a_y, ship.a_x - target.a_x) #
             if a <= 0.01:
@@ -748,11 +748,11 @@ class Environment:
             return r, v, (theta_v+3.14)/(6.28), ((theta_r - theta_v)+(6.28))/(9.42), a, ((theta_v - theta_a)+(5))/(11.2)
         else:
             r = ((target.position_x - ship.position_x) ** 2 + (target.position_y - ship.position_y) ** 2) ** 0.5 / (
-                        (target.speed + ship.speed) * 2000)
-            v = ((target.v_x - ship.v_x) ** 2 + (target.v_y - ship.v_y) ** 2) ** 0.5 / (target.speed + ship.speed)
+                        normalizer * 2000)
+            v = ((target.v_x - ship.v_x) ** 2 + (target.v_y - ship.v_y) ** 2) ** 0.5 / normalizer
             theta_r = math.atan2(target.position_y - ship.position_y, target.position_x - ship.position_x)
             theta_v = math.atan2(ship.v_y - target.v_y, ship.v_x - target.v_x)
-            a = ((target.a_x - ship.a_x) ** 2 + (target.a_y - ship.a_y) ** 2) ** 0.5 / (target.speed + ship.speed)
+            a = ((target.a_x - ship.a_x) ** 2 + (target.a_y - ship.a_y) ** 2) ** 0.5 / normalizer
             # print(a)
             theta_a = math.atan2(ship.a_y - target.a_y, ship.a_x - target.a_x)  #
             if a <= 0.01:

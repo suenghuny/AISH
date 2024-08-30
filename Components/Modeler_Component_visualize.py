@@ -1,7 +1,7 @@
 import numpy as np
-
+from Monitor import Monitor
 from Components.Adapter_Component import *
-from Components.Simulation_Component_test import *
+from Components.Simulation_Component_visualize import *
 from collections import deque
 import random
 import sys
@@ -14,13 +14,13 @@ record_theta_rva = list()
 record_theta_vaa = list()
 
 
+
 def modeler(data, visualize, size, detection_by_height, tick, simtime_per_framerate, ciws_threshold, action_history_step, epsilon = 20, discr_n = 10,
             air_alert_distance_blue = 10,
             air_alert_distance_yellow = 20,
             interval_constant_blue = [10,10],
-            inception_angle = None
+            monitor=None
             ):
-
     interval_constant_yellow = random.uniform(0.8,5)
     interval_constant_yellow = [interval_constant_yellow, interval_constant_yellow]
     env = Environment(data,
@@ -37,7 +37,7 @@ def modeler(data, visualize, size, detection_by_height, tick, simtime_per_framer
                       air_alert_distance_yellow=air_alert_distance_yellow,
                       interval_constant_blue=interval_constant_blue,
                       interval_constant_yellow = interval_constant_yellow,
-                      inception_angle =  inception_angle
+                      monitor = monitor
                       )
     return env
 
@@ -59,8 +59,9 @@ class Environment:
                  mode = False,
                  air_alert_distance_blue = 20,
                  air_alert_distance_yellow = 20,
-                 inception_angle = None
+                 monitor = None
                  ):
+        self.monitor = monitor
         self.simtime_per_framerate = simtime_per_framerate # 시뮬레이션 시간 / 프레임 주기
         self.discr_n = discr_n
         self.nautical_mile_scaler = self.simtime_per_framerate / 3600 * 10
@@ -117,33 +118,32 @@ class Environment:
         self.num_enemy_ssm = sum([value['num_ssm'] for key, value in data.ship_data.items() if value['side'] == 'yellow'])
         #ship_data, enemy_data = self.get_position_inception(self, self.data.inception_data, num_enemy)
 
+
+
+
         inception_data = self.data.inception_data
         noise = random.uniform(-10, 10)
         self.missile_speed_list = list()
-
-        inception_range = inception_angle
         self.random_recording = list()
         for key, value in data.ship_data.items():
+            inception_range = 90 + random.uniform(-25, 25)
             if value['side']=='blue':
-                speed = 25
-                course = 90
-                initial_position_x = 50+random.uniform(-15, 15)
-                initial_position_y = 50+random.uniform(-15, 15)
-
-
+                speed = 0
+                course = 0
+                initial_position_x = 200
+                initial_position_y = 200
             else:
                 if mode == True:
-                    speed = 25
-                    course = 90
-                    initial_position_x = 50 + 10*inception_data['inception_distance'] * np.cos(inception_range * np.pi / 180) + 10*random.normalvariate(inception_data['enemy_spacing_mean'], inception_data['enemy_spacing_std'])
-                    initial_position_y = 50 + 10*inception_data['inception_distance'] * np.sin(inception_range * np.pi / 180) + 10*random.normalvariate(inception_data['enemy_spacing_mean'], inception_data['enemy_spacing_std'])
-
+                    speed = 0
+                    course = 0
+                    initial_position_x = 200 + 10*inception_data['inception_distance'] * np.cos(inception_range * np.pi / 180) + 10*random.normalvariate(inception_data['enemy_spacing_mean'], inception_data['enemy_spacing_std'])
+                    initial_position_y = 200 + 10*inception_data['inception_distance'] * np.sin(inception_range * np.pi / 180) + 10*random.normalvariate(inception_data['enemy_spacing_mean'], inception_data['enemy_spacing_std'])
                 else:
-                    speed = 25
-                    course = 90
-                    initial_position_x = 50 + 10 * inception_data['inception_distance'] * np.cos(
+                    speed = 0
+                    course = 0
+                    initial_position_x = 200 + 10 * inception_data['inception_distance'] * np.cos(
                         inception_range * np.pi / 180)+ 10* random.normalvariate(inception_data['enemy_spacing_mean'], inception_data['enemy_spacing_std'])
-                    initial_position_y = 50 + 10 * inception_data['inception_distance'] * np.sin(
+                    initial_position_y = 200 + 10 * inception_data['inception_distance'] * np.sin(
                         inception_range* np.pi / 180) + 10* random.normalvariate(inception_data['enemy_spacing_mean'], inception_data['enemy_spacing_std'])
             #print(initial_position_x, initial_position_y)
             self.random_recording.append((initial_position_x, initial_position_y))
@@ -214,6 +214,9 @@ class Environment:
 
         self.friendlies_fixed_patrol_aircraft_list = [patrol_aircraft for patrol_aircraft in self.patrol_aircrafts if patrol_aircraft.side == 'blue']
         self.enemies_fixed_patrol_aircraft_list = [patrol_aircraft for patrol_aircraft in self.patrol_aircrafts if patrol_aircraft.side == 'yellow']
+        self.enemies_ssm_list = []
+        for ship in self.enemies:
+            self.enemies_ssm_list= self.enemies_ssm_list + ship.ssm_launcher
 
 
 
@@ -731,12 +734,18 @@ class Environment:
 
 
     def get_feature(self, ship, target, action_feature = False):
+
+        if target.speed+ship.speed ==  0:
+            normalizer = 1
+        else:
+            normalizer = target.speed+ship.speed
+
         if action_feature == False:
-            r = ((target.position_x - ship.position_x) ** 2 + (target.position_y - ship.position_y) ** 2) ** 0.5 / ((target.speed+ship.speed)*2000)
-            v = ((target.v_x - ship.v_x) ** 2 + (target.v_y - ship.v_y) ** 2) ** 0.5 / (target.speed+ship.speed)
+            r = ((target.position_x - ship.position_x) ** 2 + (target.position_y - ship.position_y) ** 2) ** 0.5 / (normalizer*2000)
+            v = ((target.v_x - ship.v_x) ** 2 + (target.v_y - ship.v_y) ** 2) ** 0.5 / normalizer
             theta_r = math.atan2(target.position_y - ship.position_y, target.position_x - ship.position_x)
             theta_v = math.atan2(ship.v_y - target.v_y, ship.v_x - target.v_x)
-            a = ((target.a_x - ship.a_x) ** 2 + (target.a_y - ship.a_y) ** 2) ** 0.5 / (target.speed+ship.speed)
+            a = ((target.a_x - ship.a_x) ** 2 + (target.a_y - ship.a_y) ** 2) ** 0.5 / normalizer
             #print(a)
             theta_a = math.atan2(ship.a_y - target.a_y, ship.a_x - target.a_x) #
             if a <= 0.01:
@@ -749,11 +758,11 @@ class Environment:
             return r, v, (theta_v+3.14)/(6.28), ((theta_r - theta_v)+(6.28))/(9.42), a, ((theta_v - theta_a)+(5))/(11.2)
         else:
             r = ((target.position_x - ship.position_x) ** 2 + (target.position_y - ship.position_y) ** 2) ** 0.5 / (
-                        (target.speed + ship.speed) * 2000)
-            v = ((target.v_x - ship.v_x) ** 2 + (target.v_y - ship.v_y) ** 2) ** 0.5 / (target.speed + ship.speed)
+                        normalizer * 2000)
+            v = ((target.v_x - ship.v_x) ** 2 + (target.v_y - ship.v_y) ** 2) ** 0.5 / normalizer
             theta_r = math.atan2(target.position_y - ship.position_y, target.position_x - ship.position_x)
             theta_v = math.atan2(ship.v_y - target.v_y, ship.v_x - target.v_x)
-            a = ((target.a_x - ship.a_x) ** 2 + (target.a_y - ship.a_y) ** 2) ** 0.5 / (target.speed + ship.speed)
+            a = ((target.a_x - ship.a_x) ** 2 + (target.a_y - ship.a_y) ** 2) ** 0.5 / normalizer
             # print(a)
             theta_a = math.atan2(ship.a_y - target.a_y, ship.a_x - target.a_x)  #
             if a <= 0.01:
@@ -1138,6 +1147,9 @@ class Environment:
 
         if rl == True:
             if pass_transition == False:
+                # if done == True:
+                #     print([ssm.destroying_record_by_distance for ssm in self.enemies_ssm_list if ssm.destroying_record_by_distance != None])
+
                 return reward, win_tag, done, leaker
             else:
                 pass
